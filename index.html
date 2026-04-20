@@ -1,1 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data to Table Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f1117;
+            min-height: 100vh;
+            padding: 20px;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #1a1d2e;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            border: 1px solid #2d3148;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #252840;
+            border-radius: 8px;
+            align-items: center;
+            border: 1px solid #2d3148;
+        }
+
+        .mode-selector label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #c4c9e8;
+        }
+
+        .mode-selector input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .data-type-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #1e2040;
+            border-radius: 8px;
+            align-items: center;
+            border: 2px solid #667eea;
+        }
+
+        .data-type-selector label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #c4c9e8;
+            font-size: 14px;
+        }
+
+        .data-type-selector input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #2d3148;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #7880a4;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #818cf8;
+            border-bottom-color: #818cf8;
+        }
+
+        .tab:hover {
+            color: #818cf8;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #c4c9e8;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #2d3148;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s;
+            background: #12141f;
+            color: #c4c9e8;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-upload {
+            border: 2px dashed #2d3148;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #12141f;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #1e2040;
+        }
+
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: #1e2040;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .file-upload-text {
+            color: #7880a4;
+            margin-bottom: 10px;
+        }
+
+        .file-upload-hint {
+            font-size: 12px;
+            color: #4b5280;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1e2040;
+            border-radius: 6px;
+            color: #818cf8;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-convert {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-convert:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-copy {
+            background: #10b981;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-copy:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-clear {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .output-box {
+            background: #12141f;
+            border: 2px solid #2d3148;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 300px;
+            max-height: 600px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre;
+            overflow: auto;
+            color: #a5f3c0;
+        }
+
+        .error {
+            background: #2d1515;
+            border: 2px solid #5c2626;
+            color: #f87171;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .success {
+            background: #0f2d1e;
+            border: 2px solid #1a5c3a;
+            color: #34d399;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .icon {
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Data to Table Converter</h1>
+            <p>Convert vehicle expense data from JSON, Excel, or Google Sheets</p>
+        </div>
+
+        <div class="content">
+            <div class="mode-selector">
+                <span style="font-weight: 600; color: #667eea;">Processing Mode:</span>
+                <label>
+                    <input type="radio" name="mode" value="medical" checked onchange="switchMode()">
+                    Medical
+                </label>
+                <label>
+                    <input type="radio" name="mode" value="industrial" onchange="switchMode()">
+                    Industrial
+                </label>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('json')">📝 JSON</button>
+                <button class="tab" onclick="switchTab('excel')">📄 Excel File</button>
+                <button class="tab" onclick="switchTab('spreadsheet')">📋 Copy from Spreadsheet</button>
+                <button class="tab" onclick="switchTab('to-json')">🔄 Convert to JSON</button>
+            </div>
+
+            <!-- JSON Tab -->
+            <div id="json-tab" class="tab-content active">
+                <div class="section">
+                    <div class="section-title">Input JSON Data</div>
+                    <textarea id="inputJson" placeholder='Paste your JSON data here...
+Example:
+[
+  {
+    "MOBIL": "Colt Diesel",
+    "TUJUAN": "- RSPI PURI INDAH",
+    ...
+  }
+]'></textarea>
+                    <div class="button-group">
+                        <button class="btn-convert" onclick="convertFromJson()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Convert
+                        </button>
+                        <button class="btn-clear" onclick="clearAll()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Clear
+                        </button>
+                    </div>
+                    <div id="errorMsgJson"></div>
+                </div>
+            </div>
+
+            <!-- Excel Tab -->
+            <div id="excel-tab" class="tab-content">
+                <div class="section">
+                    <div class="section-title">Upload Excel File</div>
+                    <div class="file-upload" id="fileUpload" onclick="document.getElementById('fileInput').click()">
+                        <div class="file-upload-icon">📁</div>
+                        <div class="file-upload-text">Click to upload or drag & drop</div>
+                        <div class="file-upload-hint">Supports .xlsx and .xls files</div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+                    <div id="fileName"></div>
+                    <div class="button-group">
+                        <button class="btn-convert" onclick="convertFromExcel()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Convert
+                        </button>
+                        <button class="btn-clear" onclick="clearAll()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Clear
+                        </button>
+                    </div>
+                    <div id="errorMsgExcel"></div>
+                </div>
+            </div>
+
+            <!-- Spreadsheet Tab -->
+            <div id="spreadsheet-tab" class="tab-content">
+                <!-- Data Type Selector (only shown in Medical mode) -->
+                <div class="data-type-selector" id="dataTypeSelector">
+                    <span style="font-weight: 600; color: #667eea;">Data Type:</span>
+                    <label>
+                        <input type="radio" name="dataType" value="solar-tol" checked onchange="switchDataType()">
+                        Solar dan Tol
+                    </label>
+                    <label>
+                        <input type="radio" name="dataType" value="insentif-mel" onchange="switchDataType()">
+                        Total Insentif dan Mel
+                    </label>
+                </div>
+
+                <!-- Specific Nopol Input (only shown in insentif-mel mode) -->
+                <div class="section" id="specificNopolSection" style="display: none;">
+                    <div class="section-title">Nopol Khusus (Solar + Insentif + Mel)</div>
+                    <textarea id="specificNopolInput" placeholder='Masukkan nopol yang akan dihitung: Solar + Insentif + Mel
+Format bisa menggunakan koma, baris baru, atau tanda hubung.
+
+Contoh:
+9080, 9612 syq, 9649, 9613
+
+Atau:
+- 9080 syq
+- 9612
+- 9649
+
+Atau:
+9080
+9612 syq
+9649
+
+Kosongkan jika semua nopol menggunakan perhitungan standar (Insentif + Mel saja)'
+                        style="min-height: 120px;"></textarea>
+                    <div
+                        style="font-size: 12px; color: #7880a4; margin-top: 5px; padding: 8px; background: #1e2040; border-radius: 4px; border-left: 3px solid #667eea;">
+                        💡 <strong>Info:</strong> Nopol yang dimasukkan di sini akan dihitung dengan rumus <strong>Solar
+                            + Insentif + Mel</strong>. Nopol lainnya akan tetap menggunakan <strong>Insentif +
+                            Mel</strong> saja.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Paste from Google Sheets / Excel</div>
+                    <textarea id="inputSpreadsheet" placeholder='Copy cells from Google Sheets or Excel and paste here...
+
+Example:
+Colt Diesel    - RSPI PURI INDAH    174    Rp622,000        Rincian    
+B 9589 PXW / B 9080 SYQ KW    - RSUD KEMBANGAN            Solar    Rp197,000
+MAMAD - GUNAWAN    - RS PREMIER BINTARO            Tol    Rp230,000'></textarea>
+                    <div class="button-group">
+                        <button class="btn-convert" onclick="convertFromSpreadsheet()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Convert
+                        </button>
+                        <button class="btn-clear" onclick="clearAll()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Clear
+                        </button>
+                    </div>
+                    <div id="errorMsgSpreadsheet"></div>
+                </div>
+            </div>
+
+            <!-- Convert to JSON Tab -->
+            <div id="to-json-tab" class="tab-content">
+                <div class="section">
+                    <div class="section-title">Paste Spreadsheet Data</div>
+                    <textarea id="inputSpreadsheetToJson" placeholder='Copy cells from Google Sheets or Excel and paste here...
+
+Example:
+Colt Diesel    - RSPI PURI INDAH    174    Rp622,000        Rincian    
+B 9589 PXW / B 9080 SYQ KW    - RSUD KEMBANGAN            Solar    Rp197,000
+MAMAD - GUNAWAN    - RS PREMIER BINTARO            Tol    Rp230,000'></textarea>
+                    <div class="button-group">
+                        <button class="btn-convert" onclick="convertSpreadsheetToJson()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Convert to JSON
+                        </button>
+                        <button class="btn-clear" onclick="clearToJson()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Clear
+                        </button>
+                    </div>
+                    <div id="errorMsgToJson"></div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">JSON Output</div>
+                    <div class="output-box" id="outputBoxJson"></div>
+                    <div class="button-group">
+                        <button class="btn-copy" onclick="copyJsonOutput()">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            Copy JSON to Clipboard
+                        </button>
+                    </div>
+                    <div id="successMsgJson"></div>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="section">
+                <div class="section-title">Output Table</div>
+                <div class="output-box" id="outputBox"></div>
+                <div class="button-group">
+                    <button class="btn-copy" onclick="copyOutput()">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy to Clipboard
+                    </button>
+                </div>
+                <div id="successMsg"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let excelData = null;
+        let currentTab = 'json';
+        let currentMode = 'medical';
+        let currentDataType = 'solar-tol'; // 'solar-tol' or 'insentif-mel'
+
+        function switchMode() {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            currentMode = mode;
+            updateDataTypeSelectorVisibility();
+            clearAll();
+        }
+
+        function switchDataType() {
+            const dataType = document.querySelector('input[name="dataType"]:checked').value;
+            currentDataType = dataType;
+
+            // Show/hide specific nopol section
+            const specificNopolSection = document.getElementById('specificNopolSection');
+            if (dataType === 'insentif-mel') {
+                specificNopolSection.style.display = 'block';
+            } else {
+                specificNopolSection.style.display = 'none';
+            }
+
+            // Clear output when switching data type
+            document.getElementById('outputBox').textContent = '';
+            document.getElementById('successMsg').innerHTML = '';
+        }
+
+        function updateDataTypeSelectorVisibility() {
+            const selector = document.getElementById('dataTypeSelector');
+            if (currentMode === 'medical') {
+                selector.style.display = 'flex';
+            } else {
+                selector.style.display = 'none';
+            }
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            updateDataTypeSelectorVisibility();
+            clearMessages();
+        }
+
+        function clearMessages() {
+            document.getElementById('errorMsgJson').innerHTML = '';
+            document.getElementById('errorMsgExcel').innerHTML = '';
+            document.getElementById('errorMsgSpreadsheet').innerHTML = '';
+            document.getElementById('errorMsgToJson').innerHTML = '';
+            document.getElementById('successMsg').innerHTML = '';
+            document.getElementById('successMsgJson').innerHTML = '';
+        }
+
+        function parseAmount(str) {
+            if (!str) return '-';
+            const cleaned = str.replace(/[Rp\s.,]/g, '');
+            const num = parseInt(cleaned);
+            if (isNaN(num) || num === 0) return '-';
+            return num.toLocaleString('id-ID');
+        }
+
+        function combineTwoValues(val1, val2) {
+            // Helper function to parse a formatted number back to integer
+            function parseFormattedNumber(str) {
+                if (!str || str === '-') return 0;
+                const cleaned = str.replace(/[.,]/g, '');
+                const num = parseInt(cleaned);
+                return isNaN(num) ? 0 : num;
+            }
+
+            const num1 = parseFormattedNumber(val1);
+            const num2 = parseFormattedNumber(val2);
+            const total = num1 + num2;
+
+            if (total === 0) return '-';
+            return total.toLocaleString('id-ID');
+        }
+
+        function combineThreeValues(val1, val2, val3) {
+            // Helper function to parse a formatted number back to integer
+            function parseFormattedNumber(str) {
+                if (!str || str === '-') return 0;
+                const cleaned = str.replace(/[.,]/g, '');
+                const num = parseInt(cleaned);
+                return isNaN(num) ? 0 : num;
+            }
+
+            const num1 = parseFormattedNumber(val1);
+            const num2 = parseFormattedNumber(val2);
+            const num3 = parseFormattedNumber(val3);
+            const total = num1 + num2 + num3;
+
+            if (total === 0) return '-';
+            return total.toLocaleString('id-ID');
+        }
+
+        function combineFourValues(val1, val2, val3, val4) {
+            function parseFormattedNumber(str) {
+                if (!str || str === '-') return 0;
+                const cleaned = str.replace(/[.,]/g, '');
+                const num = parseInt(cleaned);
+                return isNaN(num) ? 0 : num;
+            }
+            const total = parseFormattedNumber(val1) + parseFormattedNumber(val2) +
+                parseFormattedNumber(val3) + parseFormattedNumber(val4);
+            if (total === 0) return '-';
+            return total.toLocaleString('id-ID');
+        }
+
+        function parseSpecificNopolInput() {
+            const input = document.getElementById('specificNopolInput').value.trim();
+            if (!input) return [];
+
+            // Split by various delimiters: comma, newline, dash
+            let nopols = input.split(/[,\n-]+/)
+                .map(n => n.trim())
+                .filter(n => n.length > 0)
+                .map(n => n.toUpperCase().replace(/\s+/g, ' ')); // Normalize spaces
+
+            return nopols;
+        }
+
+        function isNopolInSpecificList(nopol, specificList) {
+            if (!specificList || specificList.length === 0) return false;
+
+            // Normalize the nopol for comparison
+            const normalizedNopol = nopol.toUpperCase().replace(/\s+/g, ' ').replace(/[\*]/g, '');
+
+            // Check if any item in specificList matches this nopol
+            for (let specific of specificList) {
+                // Remove common prefixes and extra characters for matching
+                const cleanSpecific = specific.replace(/^B\s*/i, '').trim();
+                const cleanNopol = normalizedNopol.replace(/^B\s*/i, '').trim();
+
+                // Check if the nopol contains the specific number
+                if (cleanNopol.includes(cleanSpecific) || cleanSpecific.includes(cleanNopol)) {
+                    return true;
+                }
+
+                // Also try matching just the numbers
+                const specificNumbers = cleanSpecific.replace(/[^0-9]/g, '');
+                const nopolNumbers = cleanNopol.replace(/[^0-9]/g, '');
+
+                if (specificNumbers && nopolNumbers &&
+                    (nopolNumbers.includes(specificNumbers) || specificNumbers.includes(nopolNumbers))) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Recognises all Medical vehicle header types: Colt Diesel, L-300, CDD (any variant), CDE (any variant)
+        const MEDICAL_VEHICLE_TYPES = ['Colt Diesel', 'L-300', 'CDD', 'CDE'];
+        function isMedicalVehicleHeader(mobil) {
+            if (!mobil) return false;
+            return MEDICAL_VEHICLE_TYPES.some(t => mobil.includes(t));
+        }
+
+        function processData(data, dataType = 'solar-tol', specificNopols = []) {
+            const vehicles = [];
+
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+
+                if (row.MOBIL && isMedicalVehicleHeader(row.MOBIL)) {
+                    const nopol = data[i + 1]?.MOBIL || '';
+                    const drivers = data[i + 2]?.MOBIL || '';
+
+                    // Skip if no valid driver name
+                    const driversUpper = drivers.toUpperCase();
+                    if (!drivers ||
+                        drivers.trim() === '' ||
+                        drivers.startsWith('-') ||
+                        driversUpper.includes('PERBAIKAN') ||
+                        driversUpper.includes('MAINTENANCE') ||
+                        driversUpper.includes('MESIN')) {
+                        continue;
+                    }
+
+                    if (nopol && drivers &&
+                        !isMedicalVehicleHeader(nopol) &&
+                        !isMedicalVehicleHeader(drivers)) {
+
+                        // Check if this nopol needs special treatment (Solar + Insentif + Mel)
+                        const isSpecialNopol = dataType === 'insentif-mel' && isNopolInSpecificList(nopol, specificNopols);
+
+                        let solarArray = [];
+                        let value1Array = []; // Solar or Insentif
+                        let value2Array = []; // Tol or Mel
+                        let supirKenek2RitArray = [];
+                        let hasRit2 = false;
+                        let rit2Drivers = '';
+
+                        // Clean driver names: strip [ ] brackets, normalize / separator to -
+                        function cleanDriverName(name) {
+                            let s = name.trim();
+                            s = s.replace(/^\[|\]$/g, '').trim();
+                            s = s.replace(/\s*\/\s*/g, ' - ');
+                            return s;
+                        }
+
+                        for (let j = i + 1; j < Math.min(i + 50, data.length); j++) {
+                            if (data[j].MOBIL && isMedicalVehicleHeader(data[j].MOBIL)) {
+                                break;
+                            }
+
+                            // Check for RIT 2 and extract driver names
+                            if (data[j].TUJUAN && (data[j].TUJUAN.includes('RIT 2') || data[j].TUJUAN.includes('Rit 2') || data[j].TUJUAN.includes('rit 2'))) {
+                                hasRit2 = true;
+                                // Extract driver names after "RIT 2"
+                                const tujuan = data[j].TUJUAN;
+                                const rit2Match = tujuan.match(/RIT\s*2\s+(.+)/i);
+                                if (rit2Match) {
+                                    rit2Drivers = rit2Match[1].trim();
+                                }
+                            }
+
+                            // Always collect Solar if this is a special nopol in insentif-mel mode
+                            if (isSpecialNopol && data[j].TOTAL === 'Solar') {
+                                const value = data[j]['  Nominal \nPengajuan '];
+                                if (value && value.trim() && !value.includes('Rp-')) {
+                                    solarArray.push(parseAmount(value));
+                                } else {
+                                    solarArray.push('-');
+                                }
+                            }
+
+                            // Determine what to look for based on dataType
+                            const lookFor1 = dataType === 'solar-tol' ? 'Solar' : 'Insentif';
+                            const lookFor2 = dataType === 'solar-tol' ? 'Tol' : 'Mel';
+
+                            if (data[j].TOTAL === lookFor1) {
+                                const value = data[j]['  Nominal \nPengajuan '];
+                                if (value && value.trim() && !value.includes('Rp-')) {
+                                    value1Array.push(parseAmount(value));
+                                } else {
+                                    value1Array.push('-');
+                                }
+                            }
+
+                            if (data[j].TOTAL === lookFor2) {
+                                const value = data[j]['  Nominal \nPengajuan '];
+                                if (value && value.trim() && !value.includes('Rp-')) {
+                                    value2Array.push(parseAmount(value));
+                                } else {
+                                    value2Array.push('-');
+                                }
+                            }
+
+                            // Collect Supir/Kenek 2 RIT (only present in RIT 2 block)
+                            if (data[j].TOTAL === 'Supir/Kenek 2 RIT') {
+                                const value = data[j]['  Nominal \nPengajuan '];
+                                if (value && value.trim() && !value.includes('Rp-')) {
+                                    supirKenek2RitArray.push(parseAmount(value));
+                                } else {
+                                    supirKenek2RitArray.push('-');
+                                }
+                            }
+                        }
+
+                        const cleanNopol = nopol.replace(/\*/g, '').trim();
+                        const cleanDrivers = cleanDriverName(drivers);
+
+                        // For insentif-mel mode, combine the values
+                        if (dataType === 'insentif-mel') {
+                            if (isSpecialNopol) {
+                                // Special nopol: Solar + Insentif + Mel
+                                vehicles.push({
+                                    nopol: cleanNopol,
+                                    drivers: cleanDrivers,
+                                    combinedValue: combineThreeValues(solarArray[0], value1Array[0], value2Array[0])
+                                });
+
+                                if (hasRit2 && (solarArray.length > 1 || value1Array.length > 1 || value2Array.length > 1)) {
+                                    vehicles.push({
+                                        nopol: cleanNopol + ' (RIT 2)',
+                                        drivers: rit2Drivers || cleanDrivers,
+                                        combinedValue: combineFourValues(solarArray[1], value1Array[1], value2Array[1], supirKenek2RitArray[0])
+                                    });
+                                }
+                            } else {
+                                // Normal nopol: Insentif + Mel only
+                                vehicles.push({
+                                    nopol: cleanNopol,
+                                    drivers: cleanDrivers,
+                                    combinedValue: combineTwoValues(value1Array[0], value2Array[0])
+                                });
+
+                                if (hasRit2 && (value1Array.length > 1 || value2Array.length > 1)) {
+                                    vehicles.push({
+                                        nopol: cleanNopol + ' (RIT 2)',
+                                        drivers: rit2Drivers || cleanDrivers,
+                                        combinedValue: combineThreeValues(value1Array[1], value2Array[1], supirKenek2RitArray[0])
+                                    });
+                                }
+                            }
+                        } else {
+                            vehicles.push({
+                                nopol: cleanNopol,
+                                drivers: cleanDrivers,
+                                value1: value1Array[0] || '-',
+                                value2: value2Array[0] || '-'
+                            });
+
+                            if (hasRit2 && (value1Array.length > 1 || value2Array.length > 1)) {
+                                vehicles.push({
+                                    nopol: cleanNopol + ' (RIT 2)',
+                                    drivers: rit2Drivers || cleanDrivers,
+                                    value1: value1Array[1] || '-',
+                                    value2: value2Array[1] || '-'
+                                });
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            return vehicles;
+        }
+
+        function processDataIndustrial(data) {
+            const vehicles = [];
+            const vehicleTypes = ['CDD', 'Fuso', 'FUSO', 'Wingbox', 'Trailer Wingbox'];
+
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                const mobil = row.MOBIL || '';
+
+                // Check if this row contains a vehicle type
+                let isVehicleType = false;
+                for (const vType of vehicleTypes) {
+                    if (mobil.includes(vType)) {
+                        isVehicleType = true;
+                        break;
+                    }
+                }
+
+                if (isVehicleType) {
+                    // Next row should have the plate number
+                    const nopol = data[i + 1]?.MOBIL || '';
+
+                    // Row after that should have driver name(s)
+                    let drivers = data[i + 2]?.MOBIL || '';
+
+                    // Skip if no valid plate number or driver
+                    if (!nopol || !drivers || nopol.trim() === '' || drivers.trim() === '') {
+                        continue;
+                    }
+
+                    // Skip if driver row contains maintenance keywords
+                    const driversUpper = drivers.toUpperCase();
+                    if (driversUpper.includes('PERBAIKAN') ||
+                        driversUpper.includes('MAINTENANCE') ||
+                        driversUpper.includes('MESIN')) {
+                        continue;
+                    }
+
+                    // Find Solar and Tol values in the following rows
+                    let solarValue = '-';
+                    let tolValue = '-';
+
+                    // Look ahead for expense rows (Solar, Tol, etc.)
+                    for (let j = i + 1; j < Math.min(i + 20, data.length); j++) {
+                        const expenseRow = data[j];
+
+                        // Check if we've hit another vehicle type
+                        let hitNextVehicle = false;
+                        for (const vType of vehicleTypes) {
+                            if (expenseRow.MOBIL && expenseRow.MOBIL.includes(vType)) {
+                                hitNextVehicle = true;
+                                break;
+                            }
+                        }
+                        if (hitNextVehicle) break;
+
+                        // Search through ALL properties of the row to find Solar and Tol
+                        const rowValues = Object.values(expenseRow);
+                        let foundSolar = false;
+                        let foundTol = false;
+
+                        // First, check if this row contains Solar or Tol
+                        for (let k = 0; k < rowValues.length; k++) {
+                            const val = String(rowValues[k] || '');
+                            if (val.includes('Solar')) {
+                                foundSolar = true;
+                            }
+                            if (val.includes('Tol')) {
+                                foundTol = true;
+                            }
+                        }
+
+                        // If we found Solar or Tol, look for the amount value
+                        // The amount is usually the rightmost value that contains "Rp"
+                        if (foundSolar || foundTol) {
+                            let expenseValue = '';
+                            // Search from right to left for a value containing "Rp"
+                            for (let k = rowValues.length - 1; k >= 0; k--) {
+                                const val = String(rowValues[k] || '').trim();
+                                if (val && val.includes('Rp') && !val.includes('Rp -') && !val.includes('Rp-')) {
+                                    expenseValue = val;
+                                    break;
+                                }
+                            }
+
+                            if (expenseValue) {
+                                if (foundSolar && solarValue === '-') {
+                                    solarValue = parseAmount(expenseValue);
+                                }
+                                if (foundTol && tolValue === '-') {
+                                    tolValue = parseAmount(expenseValue);
+                                }
+                            }
+                        }
+                    }
+
+                    // Clean up the data
+                    const cleanNopol = nopol.replace(/\*/g, '').trim();
+                    const cleanDrivers = drivers.trim();
+
+                    vehicles.push({
+                        nopol: cleanNopol,
+                        drivers: cleanDrivers,
+                        value1: solarValue,
+                        value2: tolValue
+                    });
+                }
+            }
+
+            return vehicles;
+        }
+
+        function displayOutput(vehicles, dataType = 'solar-tol') {
+            if (vehicles.length === 0) {
+                throw new Error('No vehicle data found');
+            }
+
+            // Determine column headers based on data type
+            let output;
+            if (dataType === 'insentif-mel') {
+                output = 'Nopol | Nama Supir—Kenek | Total Insentif + Mel\n';
+            } else {
+                output = 'Nopol | Nama Supir—Kenek | Solar | Tol\n';
+            }
+
+            let currentNumber = 1;
+            let lastNopol = '';
+
+            vehicles.forEach(v => {
+                // Check if this is a base nopol (not RIT 2)
+                const isRit2 = v.nopol.includes('(RIT 2)');
+                const baseNopol = isRit2 ? v.nopol.replace(' (RIT 2)', '') : v.nopol;
+
+                // Build the row based on data type
+                let row;
+                if (dataType === 'insentif-mel') {
+                    // For insentif-mel, use combined value
+                    if (!isRit2 && baseNopol !== lastNopol) {
+                        row = `${currentNumber}. ${v.nopol} | ${v.drivers} | ${v.combinedValue}\n`;
+                        lastNopol = baseNopol;
+                        currentNumber++;
+                    } else if (isRit2) {
+                        row = `${v.nopol} | ${v.drivers} | ${v.combinedValue}\n`;
+                    } else {
+                        row = `${currentNumber - 1}. ${v.nopol} | ${v.drivers} | ${v.combinedValue}\n`;
+                    }
+                } else {
+                    // For solar-tol, use separate values
+                    if (!isRit2 && baseNopol !== lastNopol) {
+                        row = `${currentNumber}. ${v.nopol} | ${v.drivers} | ${v.value1} | ${v.value2}\n`;
+                        lastNopol = baseNopol;
+                        currentNumber++;
+                    } else if (isRit2) {
+                        row = `${v.nopol} | ${v.drivers} | ${v.value1} | ${v.value2}\n`;
+                    } else {
+                        row = `${currentNumber - 1}. ${v.nopol} | ${v.drivers} | ${v.value1} | ${v.value2}\n`;
+                    }
+                }
+
+                output += row;
+            });
+
+            document.getElementById('outputBox').textContent = output;
+            document.getElementById('successMsg').innerHTML = '<div class="success">✓ Conversion successful! Found ' + vehicles.length + ' vehicle(s)</div>';
+        }
+
+        function convertFromJson() {
+            const input = document.getElementById('inputJson').value.trim();
+            const errorMsg = document.getElementById('errorMsgJson');
+
+            clearMessages();
+            document.getElementById('outputBox').textContent = '';
+
+            if (!input) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Please paste JSON data in the input box</div>';
+                return;
+            }
+
+            try {
+                const data = JSON.parse(input);
+                if (!Array.isArray(data)) {
+                    throw new Error('JSON must be an array');
+                }
+                const specificNopols = parseSpecificNopolInput();
+                const vehicles = currentMode === 'medical' ? processData(data, currentDataType, specificNopols) : processDataIndustrial(data);
+                displayOutput(vehicles, currentMode === 'medical' ? currentDataType : 'solar-tol');
+            } catch (e) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Error: ' + e.message + '</div>';
+            }
+        }
+
+        // File Upload Handler
+        const fileUpload = document.getElementById('fileUpload');
+
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('dragover');
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const fileName = document.getElementById('fileName');
+            fileName.innerHTML = '<div class="file-name">📄 ' + file.name + '</div>';
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                // Get raw data without headers
+                const rawData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+
+                // Dynamically detect TOTAL column
+                const TOTAL_KEYWORDS_XL = ['Rincian', 'Solar', 'Tol', 'Insentif', 'Mel', 'Parkir',
+                    'Admin TF', 'Supir/Kenek 2 RIT', 'Solar tol bongkar'];
+                function detectTotalColumnXL(rows) {
+                    const tally = {};
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        for (let c = 0; c < row.length; c++) {
+                            const cell = String(row[c] || '').trim();
+                            if (TOTAL_KEYWORDS_XL.some(kw => cell === kw || cell.startsWith(kw))) {
+                                tally[c] = (tally[c] || 0) + 1;
+                            }
+                        }
+                    }
+                    let bestCol = 5;
+                    let bestCount = 0;
+                    for (const [col, count] of Object.entries(tally)) {
+                        if (count > bestCount) { bestCount = count; bestCol = parseInt(col); }
+                    }
+                    return bestCol;
+                }
+                const xlTotalCol = detectTotalColumnXL(rawData);
+                const xlPengajuanCol = xlTotalCol + 1;
+                const xlRealisasiCol = xlTotalCol - 2 > 0 ? xlTotalCol - 2 : xlTotalCol - 1;
+
+                excelData = [];
+                for (let i = 0; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    const obj = {
+                        'MOBIL': String(row[0] || ''),
+                        'TUJUAN': String(row[1] || ''),
+                        'KM': String(row[2] || ''),
+                        '  Nominal \nRealisasi ': String(row[xlRealisasiCol] || ''),
+                        '  Nominal Realisasi ': '',
+                        'TOTAL': String(row[xlTotalCol] || ''),
+                        '  Nominal \nPengajuan ': String(row[xlPengajuanCol] || '')
+                    };
+                    excelData.push(obj);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function convertFromExcel() {
+            const errorMsg = document.getElementById('errorMsgExcel');
+
+            clearMessages();
+            document.getElementById('outputBox').textContent = '';
+
+            if (!excelData) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Please upload an Excel file first</div>';
+                return;
+            }
+
+            try {
+                const specificNopols = parseSpecificNopolInput();
+                const vehicles = currentMode === 'medical' ? processData(excelData, currentDataType, specificNopols) : processDataIndustrial(excelData);
+                displayOutput(vehicles, currentMode === 'medical' ? currentDataType : 'solar-tol');
+            } catch (e) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Error: ' + e.message + '</div>';
+            }
+        }
+
+        function convertFromSpreadsheet() {
+            const input = document.getElementById('inputSpreadsheet').value.trim();
+            const errorMsg = document.getElementById('errorMsgSpreadsheet');
+
+            clearMessages();
+            document.getElementById('outputBox').textContent = '';
+
+            if (!input) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Please paste spreadsheet data</div>';
+                return;
+            }
+
+            try {
+                // Parse TSV (tab-separated) data from spreadsheet
+                const parsed = Papa.parse(input, {
+                    delimiter: '\t',
+                    skipEmptyLines: false
+                });
+
+                const rows = parsed.data;
+
+                // Dynamically detect which column holds TOTAL values (Rincian, Solar, Tol, etc.)
+                // by scanning all rows for known keywords, then tally which column wins.
+                const TOTAL_KEYWORDS = ['Rincian', 'Solar', 'Tol', 'Insentif', 'Mel', 'Parkir',
+                    'Admin TF', 'Supir/Kenek 2 RIT', 'Solar tol bongkar'];
+                function detectTotalColumn(rows) {
+                    const tally = {};
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        for (let c = 0; c < row.length; c++) {
+                            const cell = String(row[c] || '').trim();
+                            if (TOTAL_KEYWORDS.some(kw => cell === kw || cell.startsWith(kw))) {
+                                tally[c] = (tally[c] || 0) + 1;
+                            }
+                        }
+                    }
+                    let bestCol = 5; // default (standard 7-col format)
+                    let bestCount = 0;
+                    for (const [col, count] of Object.entries(tally)) {
+                        if (count > bestCount) { bestCount = count; bestCol = parseInt(col); }
+                    }
+                    return bestCol;
+                }
+
+                const totalCol = detectTotalColumn(rows);
+                const pengajuanCol = totalCol + 1;
+                // Realisasi is typically 2 cols before TOTAL (the last Rp column before TOTAL)
+                const realisasiCol = totalCol - 2 > 0 ? totalCol - 2 : totalCol - 1;
+
+                const data = [];
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const obj = {
+                        'MOBIL': row[0] || '',
+                        'TUJUAN': row[1] || '',
+                        'KM': row[2] || '',
+                        '  Nominal \nRealisasi ': row[realisasiCol] || '',
+                        '  Nominal Realisasi ': '',
+                        'TOTAL': row[totalCol] || '',
+                        '  Nominal \nPengajuan ': row[pengajuanCol] || ''
+                    };
+                    // Carry over any extra columns for industrial format
+                    for (let c = pengajuanCol + 1; c < row.length; c++) {
+                        obj['col_' + c] = row[c] || '';
+                    }
+                    data.push(obj);
+                }
+
+                const specificNopols = parseSpecificNopolInput();
+                const vehicles = currentMode === 'medical' ? processData(data, currentDataType, specificNopols) : processDataIndustrial(data);
+                displayOutput(vehicles, currentMode === 'medical' ? currentDataType : 'solar-tol');
+            } catch (e) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Error: ' + e.message + '</div>';
+            }
+        }
+
+        function convertSpreadsheetToJson() {
+            const input = document.getElementById('inputSpreadsheetToJson').value.trim();
+            const errorMsg = document.getElementById('errorMsgToJson');
+            const outputBox = document.getElementById('outputBoxJson');
+
+            errorMsg.innerHTML = '';
+            document.getElementById('successMsgJson').innerHTML = '';
+            outputBox.textContent = '';
+
+            if (!input) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Please paste spreadsheet data</div>';
+                return;
+            }
+
+            try {
+                // Parse TSV (tab-separated) data from spreadsheet
+                const parsed = Papa.parse(input, {
+                    delimiter: '\t',
+                    skipEmptyLines: false
+                });
+
+                const rows = parsed.data;
+
+                // Convert to JSON format
+                const jsonData = [];
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+
+                    // Detect column structure
+                    let obj;
+                    if (row[4] && (String(row[4]).includes('Rincian') || String(row[4]).includes('Solar') || String(row[4]).includes('Tol'))) {
+                        // Simplified format (6 columns)
+                        obj = {
+                            'MOBIL': row[0] || '',
+                            'TUJUAN': row[1] || '',
+                            'KM': row[2] || '',
+                            '  Nominal \nRealisasi ': row[3] || '',
+                            '  Nominal Realisasi ': '',
+                            'TOTAL': row[4] || '',
+                            '  Nominal \nPengajuan ': row[5] || ''
+                        };
+                    } else {
+                        // Standard format (7 columns)
+                        obj = {
+                            'MOBIL': row[0] || '',
+                            'TUJUAN': row[1] || '',
+                            'KM': row[2] || '',
+                            '  Nominal \nRealisasi ': row[3] || '',
+                            '  Nominal Realisasi ': row[4] || '',
+                            'TOTAL': row[5] || '',
+                            '  Nominal \nPengajuan ': row[6] || ''
+                        };
+                    }
+                    jsonData.push(obj);
+                }
+
+                // Display as formatted JSON
+                const jsonOutput = JSON.stringify(jsonData, null, 2);
+                outputBox.textContent = jsonOutput;
+                document.getElementById('successMsgJson').innerHTML = '<div class="success">✓ Successfully converted to JSON! (' + jsonData.length + ' rows)</div>';
+
+            } catch (e) {
+                errorMsg.innerHTML = '<div class="error">⚠️ Error: ' + e.message + '</div>';
+            }
+        }
+
+        function copyToClipboard(text, successMsg, successText, autoHide) {
+            function doFallbackCopy() {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.top = '0';
+                ta.style.left = '0';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                let ok = false;
+                try { ok = document.execCommand('copy'); } catch (e) { }
+                document.body.removeChild(ta);
+                return ok;
+            }
+            function onSuccess() {
+                successMsg.innerHTML = '<div class="success">✓ ' + successText + '</div>';
+                if (autoHide) setTimeout(() => { successMsg.innerHTML = ''; }, 3000);
+            }
+            function onFail(reason) {
+                if (doFallbackCopy()) { onSuccess(); }
+                else { successMsg.innerHTML = '<div class="error">⚠️ Failed to copy: ' + reason + '</div>'; }
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(onSuccess).catch(err => onFail(err.message));
+            } else if (doFallbackCopy()) {
+                onSuccess();
+            } else {
+                successMsg.innerHTML = '<div class="error">⚠️ Copy not supported in this browser.</div>';
+            }
+        }
+
+        function copyJsonOutput() {
+            const output = document.getElementById('outputBoxJson').textContent;
+            const successMsg = document.getElementById('successMsgJson');
+            if (!output) {
+                successMsg.innerHTML = '<div class="error">⚠️ Nothing to copy. Please convert data first.</div>';
+                return;
+            }
+            copyToClipboard(output, successMsg, 'JSON copied to clipboard!', true);
+        }
+
+        function clearToJson() {
+            document.getElementById('inputSpreadsheetToJson').value = '';
+            document.getElementById('outputBoxJson').textContent = '';
+            document.getElementById('errorMsgToJson').innerHTML = '';
+            document.getElementById('successMsgJson').innerHTML = '';
+        }
+
+        function copyOutput() {
+            const output = document.getElementById('outputBox').textContent;
+            const successMsg = document.getElementById('successMsg');
+            if (!output) {
+                successMsg.innerHTML = '<div class="error">⚠️ Nothing to copy. Please convert data first.</div>';
+                return;
+            }
+            copyToClipboard(output, successMsg, 'Copied to clipboard!', currentTab !== 'to-json');
+        }
+
+        function clearAll() {
+            document.getElementById('inputJson').value = '';
+            document.getElementById('inputSpreadsheet').value = '';
+            document.getElementById('inputSpreadsheetToJson').value = '';
+            document.getElementById('specificNopolInput').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileName').innerHTML = '';
+            document.getElementById('outputBox').textContent = '';
+            document.getElementById('outputBoxJson').textContent = '';
+            excelData = null;
+            clearMessages();
+        }
+
+        // Initialize visibility on page load
+        updateDataTypeSelectorVisibility();
+    </script>
+</body>
+
+</html>
